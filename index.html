@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Akıllı Gıda Deposu WMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Yerleşim: depo etiketi gibi yoğun bir operatör ekranı. Üstte canlı bölme şeridi, sekmeli çalışma alanı. */
+:root {
+  --bg: #eef2f1;
+  --panel: #ffffff;
+  --panel-2: #f6f9f8;
+  --ink: #142120;
+  --muted: #586967;
+  --line: #d3dcda;
+  --accent: #0b6b62;
+  --accent-soft: #dcefec;
+  --on-solid: #ffffff;
+  --eski: #d9480f;
+  --orta: #b07d00;
+  --yeni: #2b8a3e;
+  --skt: #c92a2a;
+  --bilgi: #4d6260;
+  --bos: #e3e9e8;
+  --ok-bg: #e3f4e6;
+  --bad-bg: #fde4e4;
+  --warn-bg: #fff1dc;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1615; --panel: #152020; --panel-2: #1a2726; --ink: #e2ebe9; --muted: #94a6a3;
+    --line: #2a3b39; --accent: #46b8aa; --accent-soft: #173533; --on-solid: #ffffff;
+    --eski: #e8692f; --orta: #c99a1c; --yeni: #3f9f52; --skt: #e04848; --bilgi: #8ea3a0;
+    --bos: #1e2b2a; --ok-bg: #16301d; --bad-bg: #3a1a1a; --warn-bg: #362a12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1615; --panel: #152020; --panel-2: #1a2726; --ink: #e2ebe9; --muted: #94a6a3;
+  --line: #2a3b39; --accent: #46b8aa; --accent-soft: #173533; --on-solid: #ffffff;
+  --eski: #e8692f; --orta: #c99a1c; --yeni: #3f9f52; --skt: #e04848; --bilgi: #8ea3a0;
+  --bos: #1e2b2a; --ok-bg: #16301d; --bad-bg: #3a1a1a; --warn-bg: #362a12;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5; }
+.sayfa { max-width: 1280px; margin: 0 auto; padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; letter-spacing: .005em; line-height: 1.15; }
+h2 { font-size: 19px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+p { margin: 0; }
+.mono, code { font-family: var(--f-mono); font-size: 12.5px; }
+.sayi { font-variant-numeric: tabular-nums; }
+
+/* üst */
+.ust { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.eyebrow { font-family: var(--f-display); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.ust-sag { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.demo-not { font-size: 12px; color: var(--muted); }
+
+button, .btn { font: 500 13px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r); padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+button:hover, .btn:hover { border-color: var(--accent); }
+button.ana { background: var(--accent); border-color: var(--accent); color: var(--on-solid); }
+button.tehlike { color: var(--skt); }
+button.onay { background: var(--skt); border-color: var(--skt); color: var(--on-solid); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* sensör şeridi */
+.sensorler { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sensorler .etiket { font-family: var(--f-display); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.bolme { font-family: var(--f-mono); font-size: 12px; padding: 4px 8px; border-radius: 4px; background: var(--ok-bg); border: 1px solid transparent; white-space: nowrap; }
+.bolme.kotu { background: var(--bad-bg); border-color: var(--skt); }
+.bolme b { font-weight: 500; }
+
+/* sekmeler */
+.sekmeler-kap { overflow-x: auto; border-bottom: 1px solid var(--line); }
+.sekmeler { display: flex; gap: 2px; min-width: max-content; }
+.sekmeler a { font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: .02em; color: var(--muted); text-decoration: none; padding: 9px 14px; border-bottom: 3px solid transparent; display: inline-flex; gap: 6px; align-items: center; }
+.sekmeler a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.sekmeler a:hover { color: var(--ink); }
+.rozet { font: 600 11px var(--f-body); background: var(--skt); color: var(--on-solid); border-radius: 9px; padding: 0 6px; line-height: 17px; }
+
+/* paneller */
+main { display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.arac { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.arac .bosluk { flex: 1; }
+.iki { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 860px) { .iki { grid-template-columns: minmax(0, 1fr); } }
+.not { color: var(--muted); font-size: 13px; }
+.giris-metni { max-width: 72ch; color: var(--ink); font-size: 15px; }
+
+/* KPI */
+.kpiler { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 2px; }
+.kpi .ad { font-size: 12px; color: var(--muted); }
+.kpi .deger { font-family: var(--f-display); font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi .alt { font-size: 12px; color: var(--muted); }
+.kpi.kritik .deger { color: var(--skt); }
+
+/* akış */
+.akis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; counter-reset: adim; }
+.adim { border-top: 3px solid var(--accent); background: var(--panel-2); padding: 10px 12px; border-radius: 0 0 var(--r) var(--r); display: grid; gap: 4px; }
+.adim b { font-family: var(--f-display); font-size: 15px; }
+.adim b::before { counter-increment: adim; content: counter(adim) " · "; color: var(--accent); }
+.adim span { font-size: 13px; color: var(--muted); }
+
+/* tablolar */
+.tablo-kap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-family: var(--f-display); font-weight: 600; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--panel-2); padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; position: sticky; top: 0; }
+td { padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+td.uzun { white-space: normal; min-width: 260px; }
+tr.secilebilir { cursor: pointer; }
+tr.secilebilir:hover td { background: var(--panel-2); }
+tr.secili td { background: var(--accent-soft); }
+tr.hata td { color: var(--skt); }
+.kaydir { max-height: 420px; overflow-y: auto; }
+
+/* durum hapları */
+.hap { display: inline-block; font: 600 11.5px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--on-solid); padding: 2px 8px; border-radius: 3px; white-space: nowrap; }
+.d-ESKI { background: var(--eski); } .d-ORTA { background: var(--orta); } .d-YENI { background: var(--yeni); } .d-SKT_GECTI { background: var(--skt); }
+.s-KRITIK { background: var(--skt); } .s-UYARI { background: var(--eski); } .s-BILGI { background: var(--bilgi); }
+.t-bozuk { background: var(--skt); } .t-dikkat { background: var(--eski); } .t-taze { background: var(--yeni); } .t-ayiklandi { background: var(--bilgi); }
+.yazi-ESKI { color: var(--eski); } .yazi-ORTA { color: var(--orta); } .yazi-YENI { color: var(--yeni); } .yazi-SKT_GECTI { color: var(--skt); }
+
+/* uyarılar */
+.uyarilar { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.uyarilar li { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 13px; }
+.uyarilar li .hap { text-align: center; }
+
+/* okutma */
+.okut-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; }
+@media (max-width: 760px) { .okut-form { grid-template-columns: minmax(0, 1fr) auto; } }
+input[type="text"], textarea { font: 15px var(--f-mono); width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel-2); color: var(--ink); min-width: 0; }
+textarea { font-size: 12.5px; min-height: 150px; resize: vertical; }
+.secim { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.secim input { position: absolute; opacity: 0; pointer-events: none; }
+.secim label { padding: 7px 12px; cursor: pointer; font-weight: 500; font-size: 13px; }
+.secim input:checked + label { background: var(--accent); color: var(--on-solid); }
+.secim input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sonuc { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 16px; align-items: start; }
+@media (max-width: 760px) { .sonuc { grid-template-columns: minmax(0, 1fr); } }
+.alanlar { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 4px 12px; font-size: 13.5px; }
+.alanlar dt { color: var(--muted); }
+.alanlar dd { margin: 0; overflow-wrap: anywhere; }
+.buyuk-durum { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .04em; color: var(--on-solid); background: var(--bilgi); border-radius: var(--r); text-align: center; padding: 22px 10px; line-height: 1.1; }
+.mesaj-ok { color: var(--yeni); font-weight: 500; }
+.mesaj-hata { color: var(--skt); font-weight: 500; }
+.uyari-satir { color: var(--eski); font-size: 13px; }
+
+/* depo */
+.depo-kap { overflow-x: auto; }
+.depo { display: grid; grid-template-columns: 34px 118px repeat(12, minmax(64px, 1fr)); gap: 3px; min-width: 980px; }
+.kapi { grid-row: 2 / span 6; grid-column: 1; background: var(--ink); color: var(--bg); border-radius: 4px; display: grid; place-items: center; font: 700 13px var(--f-display); letter-spacing: .2em; writing-mode: vertical-rl; transform: rotate(180deg); }
+.bant-bas { font: 600 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; text-align: center; padding: 2px 0 4px; border-bottom: 3px solid; }
+.koridor-ad { font-size: 12px; line-height: 1.25; display: grid; align-content: center; padding-right: 4px; }
+.koridor-ad b { font-family: var(--f-display); font-size: 13px; }
+.koridor-ad span { color: var(--muted); }
+.goz { border: 0; border-radius: 4px; background: var(--bos); color: var(--muted); padding: 4px 5px; min-height: 62px; display: grid; align-content: start; gap: 1px; text-align: left; font-size: 11px; line-height: 1.25; cursor: pointer; }
+.goz.dolu { color: var(--on-solid); }
+.goz .kod { font-family: var(--f-mono); font-size: 10px; opacity: .85; }
+.goz .ad { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goz.secili { outline: 3px solid var(--ink); outline-offset: 1px; }
+.lejant { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* grafik */
+.grafik svg { width: 100%; height: auto; display: block; }
+.grafik text { font-family: var(--f-body); font-size: 12px; fill: var(--muted); }
+
+details summary { cursor: pointer; font-weight: 500; }
+.bilgi-kutu { background: var(--panel-2); border-radius: var(--r); padding: 10px 12px; font-size: 13px; display: grid; gap: 4px; }
+.bilgi-kutu.kotu { background: var(--bad-bg); }
+.bilgi-kutu.iyi { background: var(--ok-bg); }
+.bilgi-kutu ul { margin: 0; padding-left: 18px; }
+
+.bildirim { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: min(420px, calc(100vw - 32px)); background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--r); font-size: 13px; box-shadow: 0 6px 24px rgba(0,0,0,.25); z-index: 20; }
+@media (prefers-reduced-motion: no-preference) { .panel { animation: gel .18s ease-out; } @keyframes gel { from { transform: translateY(3px); } to { transform: none; } } }
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="sayfa">
+  <header class="ust">
+    <div>
+      <div class="eyebrow">ENG 499 · IE Yazılım Modülü</div>
+      <h1>Akıllı Gıda Depolama ve Stok Optimizasyonu</h1>
+    </div>
+    <div class="ust-sag">
+      <span class="demo-not">Demo: veriler senin tarayıcında simüle edilir, herkes kendi kopyasıyla çalışır.</span>
+      <button id="sifirla" type="button" class="tehlike">Demo verisini sıfırla</button>
+    </div>
+  </header>
+  <div class="sensorler" id="sensorler" aria-live="polite"></div>
+  <div class="sekmeler-kap"><nav class="sekmeler" id="sekmeler" aria-label="Ekranlar"></nav></div>
+  <main id="icerik"></main>
+</div>
+<div id="bildirim" class="bildirim" role="status" hidden></div>
+
+<script>
+"use strict";
+// ============================================================ ayarlar (config.py)
+const GUN = 864e5, SAAT_MS = 36e5;
+const GRUPLAR = [
+  { kod: "G1", ad: "Dondurulmuş", smin: -25, smax: -15, nmin: 0, nmax: 100, ornek: "Dondurulmuş sebze, et" },
+  { kod: "G2", ad: "Soğuk – Kuru", smin: 0, smax: 4, nmin: 60, nmax: 80, ornek: "Süt, peynir, yoğurt" },
+  { kod: "G3", ad: "Soğuk – Nemli", smin: 0, smax: 4, nmin: 85, nmax: 95, ornek: "Elma, çilek, marul" },
+  { kod: "G4", ad: "Serin – Nemli", smin: 8, smax: 13, nmin: 85, nmax: 95, ornek: "Muz, domates, narenciye" },
+  { kod: "G5", ad: "Serin – Kuru", smin: 8, smax: 15, nmin: 60, nmax: 75, ornek: "Patates, soğan" },
+  { kod: "G6", ad: "Oda Sıcaklığı – Kuru", smin: 15, smax: 25, nmin: 40, nmax: 65, ornek: "Bakliyat, konserve" },
+];
+const G = Object.fromEntries(GRUPLAR.map(g => [g.kod, g]));
+const AYAR = {
+  olgunlukEsigi: 0.5, carpan: { HAM: 1, OLGUN: 0.5 }, fefoModu: "mutlak", eskiGun: 1, ortaGun: 7,
+  eskiOran: 1 / 3, ortaOran: 2 / 3, q10: 2, maksAralikSaat: 2, sira: 12, sensorSn: 30,
+  fefoEngelle: true, bozulma: 0.5, dikkat: 0.7, birim: 1, bayatSaat: 24,
+  rafGrubu: { "RAF-01": "G3" }, urunEsleme: { elma: "08690000000062", portakal: "08690000000154" },
+  tahminGecmis: 60, ufuk: 7, degerlendirme: 28, z: 1.65, gozdenGecirme: 7,
+};
+const BANTLAR = { ESKI: [1, 4], ORTA: [5, 8], YENI: [9, 12] };
+const bantOf = sira => sira <= 4 ? "ESKI" : sira <= 8 ? "ORTA" : "YENI";
+const BANT_TERCIHI = { ESKI: ["ESKI", "ORTA", "YENI"], ORTA: ["ORTA", "YENI", "ESKI"], YENI: ["YENI", "ORTA", "ESKI"] };
+const ETIKET = { ESKI: "ESKİ ÜRETİM", ORTA: "ORTA ÜRETİM", YENI: "YENİ ÜRETİM", SKT_GECTI: "SKT GEÇTİ" };
+const SEVIYE = { KRITIK: 0, UYARI: 1, BILGI: 2 };
+const SEVIYE_AD = { KRITIK: "Kritik", UYARI: "Uyarı", BILGI: "Bilgi" };
+
+// gtin, ad, grup, raf ömrü (gün), renk sınıfı?, min stok, tedarik (gün), günlük ort. talep
+const URUNLER = [
+  ["08690000000017", "Dondurulmuş Bezelye", "G1", 365, 0, 20, 5, 6],
+  ["08690000000024", "Dondurulmuş Tavuk", "G1", 180, 0, 15, 4, 5],
+  ["08690000000031", "Pastörize Süt 1L", "G2", 5, 0, 30, 1, 25],
+  ["08690000000048", "Beyaz Peynir", "G2", 60, 0, 10, 3, 4],
+  ["08690000000055", "Yoğurt 1kg", "G2", 21, 0, 15, 2, 10],
+  ["08690000000062", "Elma", "G3", 30, 1, 40, 3, 30],
+  ["08690000000079", "Çilek", "G3", 5, 1, 10, 1, 12],
+  ["08690000000086", "Marul", "G3", 7, 0, 10, 1, 9],
+  ["08690000000093", "Muz", "G4", 10, 1, 20, 2, 18],
+  ["08690000000154", "Portakal", "G4", 21, 1, 20, 3, 15],
+  ["08690000000109", "Domates", "G4", 14, 1, 30, 2, 22],
+  ["08690000000116", "Patates", "G5", 60, 0, 40, 4, 28],
+  ["08690000000123", "Kuru Soğan", "G5", 90, 0, 30, 4, 20],
+  ["08690000000130", "Kırmızı Mercimek", "G6", 365, 0, 15, 7, 7],
+  ["08690000000147", "Domates Konservesi", "G6", 720, 0, 15, 7, 8],
+];
+const HAFTALIK = [0.85, 0.9, 0.95, 1.0, 1.15, 1.3, 0.85]; // Pzt..Paz
+// Görüntü işleme ekibinin RAF-01 test çıktısı (depo_son_durum.json)
+const EKIP_CIKTISI = {
+  timestamp: "2026-11-13T16:35:45.277336+00:00", status: "success", shelf_id: "RAF-01", total_items: 4,
+  items: [
+    { product_id: "URN-portakal-001", product_type: "Portakal", condition: "Bozulmus", freshness_score: 0.41, alert: true },
+    { product_id: "URN-portakal-002", product_type: "Portakal", condition: "Taze", freshness_score: 0.9, alert: false },
+    { product_id: "URN-elma-001", product_type: "Elma", condition: "Bozulmus", freshness_score: 0.19, alert: true },
+    { product_id: "URN-elma-002", product_type: "Elma", condition: "Bozulmus", freshness_score: 0.47, alert: true },
+  ],
+};
+
+// ============================================================ yardımcılar
+function rng(tohum) {
+  let a = tohum >>> 0;
+  const r = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  r.uniform = (x, y) => x + (y - x) * r();
+  r.int = (x, y) => Math.floor(x + (y - x + 1) * r());
+  r.gauss = (m, s) => { let u = 0; while (!u) u = r(); return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+  return r;
+}
+const canliRnd = rng((Date.now() ^ 0x5f3759df) >>> 0);
+let renkRnd = canliRnd;
+let SAAT = () => Date.now();
+const p2 = n => String(n).padStart(2, "0");
+const fD = t => { const d = new Date(t); return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}`; };
+const fDT = t => { const d = new Date(t); return `${fD(t)} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const fDTs = t => { const d = new Date(t); return `${fDT(t)}:${p2(d.getSeconds())}`; };
+const yymmdd = d => `${String(d.getFullYear()).slice(2)}${p2(d.getMonth() + 1)}${p2(d.getDate())}`;
+const ymd = t => { const d = new Date(t); return `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}`; };
+const gunAnahtar = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const gunBasi = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sayi = (x, d = 1) => Number.isFinite(x) ? x.toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–";
+const ort = a => a.reduce((x, y) => x + y, 0) / a.length;
+const yuvarla = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
+const goz = (grup, sira) => `${grup}-${p2(sira)}`;
+class Hata extends Error {}
+
+// ============================================================ durum
+let S;
+function bosDurum() {
+  const konum = {};
+  for (const g of GRUPLAR) for (let i = 1; i <= AYAR.sira; i++) konum[goz(g.kod, i)] = null;
+  return {
+    surum: 2, urunler: [], lotlar: [], konum, hareketler: [], okutmalar: [],
+    sensor: Object.fromEntries(GRUPLAR.map(g => [g.kod, []])),
+    taramalar: [], tespitler: [], etiketler: {}, seq: { lot: 0, tarama: 0, tespit: 0, okutma: 0 },
+  };
+}
+const ANAHTAR = "eng499-wms-v2";
+function kaydet() { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { /* depolama yoksa oturum içinde çalışır */ } }
+function yukle() {
+  try { const v = JSON.parse(localStorage.getItem(ANAHTAR)); if (v && v.surum === 2) return v; } catch (e) { /* yok say */ }
+  return null;
+}
+const urun = gtin => S.urunler.find(u => u.gtin === gtin);
+
+// ============================================================ sensör (sensor.py)
+function olc(kod, r, sapma = 0.03) {
+  const g = G[kod];
+  let s = (g.smin + g.smax) / 2 + r.gauss(0, 0.6);
+  const n = (g.nmin + g.nmax) / 2 + r.gauss(0, 2);
+  if (r() < sapma) s = g.smax + r.uniform(2, 6); // kapı açık kaldı / soğutucu arızası
+  return [yuvarla(s, 1), yuvarla(Math.min(Math.max(n, 0), 100), 1)];
+}
+function renkOku(r) {
+  const olgun = r() < 0.5;
+  return [olgun ? r.int(150, 230) : r.int(40, 120), olgun ? r.int(40, 120) : r.int(150, 230), r.int(20, 80)];
+}
+function tumGruplariOlc() {
+  const t = SAAT();
+  for (const g of GRUPLAR) {
+    const [s, n] = olc(g.kod, canliRnd);
+    const liste = S.sensor[g.kod];
+    liste.push([t, s, n]);
+    while (liste.length && liste[0][0] < t - 7 * GUN) liste.shift();
+  }
+}
+const sonOkuma = kod => S.sensor[kod][S.sensor[kod].length - 1];
+
+// ============================================================ sınıflandırma (siniflandirma.py)
+const kosulUygun = (kod, s, n) => { const g = G[kod]; return g.smin <= s && s <= g.smax && g.nmin <= n && n <= g.nmax; };
+const renkSinifi = (r, g) => ((r + g) ? r / (r + g) : 0) >= AYAR.olgunlukEsigi ? "OLGUN" : "HAM";
+function sapmaCezasiSaat(kod, okumalar) {
+  const tavan = G[kod].smax;
+  let ceza = 0;
+  for (let i = 0; i < okumalar.length - 1; i++) {
+    const [t1, s1] = okumalar[i], [t2] = okumalar[i + 1];
+    if (s1 > tavan) ceza += Math.min((t2 - t1) / SAAT_MS, AYAR.maksAralikSaat) * (AYAR.q10 ** ((s1 - tavan) / 10) - 1);
+  }
+  return ceza;
+}
+function fefoDurumu(kalan, toplam) {
+  if (kalan <= 0) return "SKT_GECTI";
+  if (AYAR.fefoModu === "oran") {
+    const oran = toplam ? kalan / toplam : 0;
+    return oran <= AYAR.eskiOran ? "ESKI" : oran <= AYAR.ortaOran ? "ORTA" : "YENI";
+  }
+  return kalan <= AYAR.eskiGun ? "ESKI" : kalan <= AYAR.ortaGun ? "ORTA" : "YENI";
+}
+
+// ============================================================ barkod (barkod.py)
+function tarih6(s) {
+  if (!/^\d{6}$/.test(s)) throw new Hata(`Geçersiz tarih alanı: ${s}`);
+  const y = 2000 + +s.slice(0, 2), m = +s.slice(2, 4);
+  let d = +s.slice(4);
+  if (m < 1 || m > 12) throw new Hata(`Geçersiz tarih: ${s}`);
+  if (d === 0) d = new Date(y, m, 0).getDate(); // GS1: gün 00 → ayın son günü
+  const t = new Date(y, m - 1, d);
+  if (t.getMonth() !== m - 1) throw new Hata(`Geçersiz tarih: ${s}`);
+  return t;
+}
+function barkodCoz(ham) {
+  ham = ham.trim();
+  if (!ham) throw new Hata("Boş barkod");
+  if (/^\d+$/.test(ham)) {
+    if (![8, 12, 13, 14].includes(ham.length)) throw new Hata(`Geçersiz barkod uzunluğu: ${ham.length}`);
+    return { gtin: ham.padStart(14, "0"), miktar: 1 };
+  }
+  const alan = {};
+  for (const [, k, v] of ham.matchAll(/\((\d{2,4})\)([^()]+)/g)) alan[k] = v;
+  if (!alan["01"]) throw new Hata("Barkodda GTIN (01) alanı yok");
+  const b = { gtin: alan["01"].trim().padStart(14, "0"), miktar: 1 };
+  if (alan["10"]) b.lotNo = alan["10"].trim();
+  if (alan["11"]) b.uretim = tarih6(alan["11"]);
+  if (alan["17"]) b.skt = tarih6(alan["17"]); else if (alan["15"]) b.skt = tarih6(alan["15"]);
+  if (alan["30"]) {
+    if (!/^\d+$/.test(alan["30"]) || +alan["30"] <= 0) throw new Hata(`Geçersiz miktar: ${alan["30"]}`);
+    b.miktar = +alan["30"];
+  }
+  return b;
+}
+
+// ============================================================ depo servisi (depo.py)
+function lotKonumlari() { const m = {}; for (const [k, id] of Object.entries(S.konum)) if (id) m[id] = k; return m; }
+function aktifLotlar(gtin) {
+  const simdi = SAAT(), tazelik = lotTazelikleri(), konumu = lotKonumlari();
+  return S.lotlar.filter(l => l.durum === "AKTIF" && (!gtin || l.gtin === gtin)).map(l => {
+    const u = urun(l.gtin);
+    const okumalar = S.sensor[u.grup].filter(o => o[0] >= l.giris);
+    let etkin = l.skt - sapmaCezasiSaat(u.grup, okumalar) * SAAT_MS;
+    const tz = tazelik[l.id];
+    // kamera bozulma başladığını görüyor: lot en geç eskiGun içinde tüketilmeli
+    if (tz && tz.skor < AYAR.dikkat) etkin = Math.min(etkin, tz.t + AYAR.eskiGun * GUN);
+    const kalan = (etkin - simdi) / GUN, toplam = (l.skt - l.uretim) / GUN;
+    return { id: l.id, gtin: l.gtin, ad: u.ad, grup: u.grup, lotNo: l.lotNo, uretim: l.uretim, skt: l.skt,
+      etkin, renk: l.renk, giris: l.giris, miktar: l.miktar, konum: konumu[l.id] || null,
+      kalan, durum: fefoDurumu(kalan, toplam), tazelik: tz ? tz.skor : null };
+  });
+}
+const lotGetir = id => aktifLotlar().find(l => l.id === id);
+const fefoSirasi = gtin => aktifLotlar(gtin).filter(l => l.durum !== "SKT_GECTI").sort((a, b) => a.etkin - b.etkin || a.id - b.id);
+function hareket(t, gtin, lotId, tur, miktar) { S.hareketler.push({ t, gtin, lotId, tur, miktar }); }
+
+function barkodOkut(ham, islem = "GIRIS") {
+  const s = { zaman: SAAT(), islem, basarili: false, mesaj: "", urunAdi: "", grup: "", lot: null, miktar: 0, sicaklik: null, nem: null, kosulUygun: null, uyarilar: [] };
+  let b, u;
+  try { b = barkodCoz(ham); } catch (e) { s.mesaj = e.message; return okutmaKaydet(ham, s, null); }
+  u = urun(b.gtin);
+  if (!u) { s.mesaj = `Tanımsız ürün (GTIN ${b.gtin})`; return okutmaKaydet(ham, s, b.gtin); }
+  s.urunAdi = u.ad; s.grup = u.grup;
+  const o = sonOkuma(u.grup);
+  if (o) {
+    [, s.sicaklik, s.nem] = o;
+    s.kosulUygun = kosulUygun(u.grup, o[1], o[2]);
+    if (!s.kosulUygun) s.uyarilar.push(`${u.grup} bölmesi koşul dışı: ${o[1]} °C / %${o[2]}`);
+  } else s.uyarilar.push("Bu bölme için sensör verisi yok");
+  if (islem === "GIRIS") girisYap(b, u, s); else cikisYap(b, s);
+  return okutmaKaydet(ham, s, b.gtin);
+}
+function okutmaKaydet(ham, s, gtin) {
+  S.okutmalar.push({ id: ++S.seq.okutma, t: s.zaman, ham, islem: s.islem, gtin, lotId: s.lot ? s.lot.id : null, durum: s.lot ? s.lot.durum : null, basarili: s.basarili, mesaj: s.mesaj });
+  if (S.okutmalar.length > 300) S.okutmalar.splice(0, S.okutmalar.length - 300);
+  return s;
+}
+function girisYap(b, u, s) {
+  const z = s.zaman;
+  const renk = u.renk ? renkSinifi(...renkOku(renkRnd)) : null;
+  const uretim = b.uretim ? b.uretim.getTime() : gunBasi(z);
+  let skt = uretim + u.omur * (AYAR.carpan[renk] ?? 1) * GUN;
+  if (b.skt) skt = Math.min(skt, b.skt.getTime() + (23 * 60 + 59) * 60000); // barkoddaki SKT daha erkense o geçerli
+  if (skt <= z) { s.mesaj = `SKT geçmiş ürün kabul edilmez (SKT ${fD(skt)})`; return; }
+  const lotNo = b.lotNo || `OTO-${ymd(uretim)}`;
+  let lot = S.lotlar.find(l => l.gtin === b.gtin && l.lotNo === lotNo && l.durum === "AKTIF");
+  if (lot) lot.miktar += b.miktar;
+  else { lot = { id: ++S.seq.lot, gtin: b.gtin, lotNo, uretim, skt, renk, giris: z, miktar: b.miktar, durum: "AKTIF" }; S.lotlar.push(lot); }
+  hareket(z, b.gtin, lot.id, "GIRIS", b.miktar);
+  let li = lotGetir(lot.id);
+  if (!li.konum && li.durum !== "SKT_GECTI") { konumAta(li); li = lotGetir(lot.id); }
+  s.basarili = true; s.lot = li; s.miktar = b.miktar;
+  s.mesaj = `${b.miktar} birim giriş yapıldı → ${li.konum || "TAMPON ALAN"}`;
+  if (!li.konum) s.uyarilar.push("Koridor dolu: ürün tampon alana alındı");
+  if (li.durum === "ESKI") s.uyarilar.push("Eski Üretim: öncelikli sevk edilmeli");
+}
+function cikisYap(b, s) {
+  const sira = fefoSirasi(b.gtin);
+  if (!sira.length) { s.mesaj = "Satılabilir stok yok"; return; }
+  let plan;
+  if (b.lotNo) {
+    const hedef = sira.find(l => l.lotNo === b.lotNo);
+    if (!hedef) { s.mesaj = `Lot ${b.lotNo} stokta yok veya SKT geçmiş`; return; }
+    const ilk = sira[0];
+    if (hedef.id !== ilk.id && hedef.etkin > ilk.etkin) {
+      const uyari = `FEFO ihlali: önce lot ${ilk.lotNo} (SKT ${fDT(ilk.etkin)}, konum ${ilk.konum || "tampon"}) çıkmalı`;
+      if (AYAR.fefoEngelle) { s.mesaj = uyari; s.lot = ilk; return; }
+      s.uyarilar.push(uyari);
+    }
+    if (hedef.miktar < b.miktar) { s.mesaj = `Lotta yeterli miktar yok (${hedef.miktar})`; return; }
+    plan = [[hedef, b.miktar]];
+  } else {
+    plan = fefoToplamaPlani(sira, b.miktar);
+    const toplam = plan.reduce((x, [, m]) => x + m, 0);
+    if (toplam < b.miktar) { s.mesaj = `Yetersiz stok: istenen ${b.miktar}, mevcut ${sira.reduce((x, l) => x + l.miktar, 0)}`; return; }
+  }
+  for (const [lot, m] of plan) stoktanDus(s.zaman, lot, m, "CIKIS");
+  s.basarili = true; s.lot = plan[0][0]; s.miktar = b.miktar;
+  s.mesaj = "Çıkış: " + plan.map(([l, m]) => `${m} birim lot ${l.lotNo} (${l.konum || "tampon"})`).join(", ");
+}
+function fefoToplamaPlani(sira, miktar) {
+  const plan = [];
+  for (const lot of sira) { if (miktar <= 0) break; const al = Math.min(lot.miktar, miktar); plan.push([lot, al]); miktar -= al; }
+  return plan;
+}
+function stoktanDus(t, lot, miktar, tur) {
+  const ham = S.lotlar.find(l => l.id === lot.id);
+  const kalan = ham.miktar - miktar;
+  if (kalan > 0) ham.miktar = kalan;
+  else {
+    ham.miktar = 0; ham.durum = tur === "IMHA" ? "IMHA" : "TUKENDI";
+    for (const k in S.konum) if (S.konum[k] === ham.id) S.konum[k] = null;
+  }
+  hareket(t, ham.gtin, ham.id, tur, miktar);
+}
+function konumAta(lot) {
+  for (const bant of BANT_TERCIHI[lot.durum]) {
+    const [a, b] = BANTLAR[bant];
+    for (let sira = a; sira <= b; sira++) {
+      const k = goz(lot.grup, sira);
+      if (!S.konum[k]) { S.konum[k] = lot.id; return k; }
+    }
+  }
+  return null;
+}
+function yenidenKonumlandir() {
+  const lotlar = aktifLotlar().sort((a, b) => a.etkin - b.etkin || a.id - b.id);
+  const eski = Object.fromEntries(lotlar.map(l => [l.id, l.konum]));
+  for (const k in S.konum) S.konum[k] = null;
+  const tasimalar = [];
+  for (const lot of lotlar) {
+    const yeni = lot.durum === "SKT_GECTI" ? null : konumAta(lot);
+    if (yeni !== eski[lot.id]) tasimalar.push([lot, eski[lot.id], yeni]);
+  }
+  return tasimalar;
+}
+function stokMiktarlari() {
+  const t = {};
+  for (const l of aktifLotlar()) if (l.durum !== "SKT_GECTI") t[l.gtin] = (t[l.gtin] || 0) + l.miktar;
+  return t;
+}
+function uyarilar() {
+  const liste = [];
+  for (const g of GRUPLAR) {
+    const o = sonOkuma(g.kod);
+    if (o && !kosulUygun(g.kod, o[1], o[2])) liste.push(["KRITIK", `${g.kod} ${g.ad}: koşul dışı ${o[1]} °C / %${o[2]}`]);
+  }
+  for (const l of aktifLotlar().sort((a, b) => a.etkin - b.etkin)) {
+    if (l.durum === "SKT_GECTI") liste.push(["KRITIK", `${l.ad} lot ${l.lotNo}: SKT geçti, imha/iade edilmeli`]);
+    else if (l.durum === "ESKI") liste.push(["UYARI", `${l.ad} lot ${l.lotNo}: ${Math.round(l.kalan * 24)} saat kaldı, öncelikli sevk (${l.konum || "tampon"})`]);
+    if (!l.konum && l.durum !== "SKT_GECTI") liste.push(["BILGI", `${l.ad} lot ${l.lotNo}: tampon alanda`]);
+  }
+  const stok = stokMiktarlari();
+  for (const u of S.urunler) if ((stok[u.gtin] || 0) < u.minStok) liste.push(["UYARI", `${u.ad}: kritik stok (${stok[u.gtin] || 0} < ${u.minStok})`]);
+  liste.push(...goruntuUyarilari());
+  return liste.sort((a, b) => SEVIYE[a[0]] - SEVIYE[b[0]]);
+}
+function suresiDolanlariImhaEt() {
+  const t = SAAT(), dolanlar = aktifLotlar().filter(l => l.durum === "SKT_GECTI");
+  for (const l of dolanlar) stoktanDus(t, l, l.miktar, "IMHA");
+  return dolanlar;
+}
+function israfOrani(gun = 30) {
+  const bas = SAAT() - gun * GUN; let c = 0, i = 0;
+  for (const h of S.hareketler) if (h.t >= bas) { if (h.tur === "CIKIS") c += h.miktar; else if (h.tur === "IMHA") i += h.miktar; }
+  return c + i ? i / (c + i) : 0;
+}
+
+// ============================================================ görüntü işleme (goruntu.py)
+const TR = { "ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u", "â": "a", "î": "i", "û": "u" };
+const normalize = m => String(m).replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase().replace(/[çğıöşüâîû]/g, c => TR[c]).trim();
+const kosulBozuk = k => normalize(k).startsWith("bozul");
+
+function raporCoz(veri) {
+  if (typeof veri === "string") {
+    try { veri = JSON.parse(veri); } catch (e) { throw new Hata(`JSON okunamadı: ${e.message}`); }
+  }
+  if (!veri || typeof veri !== "object" || Array.isArray(veri)) throw new Hata("JSON kökü bir nesne olmalı");
+  for (const a of ["timestamp", "shelf_id", "items"]) if (!(a in veri)) throw new Hata(`Eksik alan: ${a}`);
+  if (!Array.isArray(veri.items)) throw new Hata("items bir liste olmalı");
+  const t = Date.parse(String(veri.timestamp).replace(/(\.\d{3})\d+/, "$1"));
+  if (Number.isNaN(t)) throw new Hata(`Geçersiz zaman: ${veri.timestamp}`);
+  const rapor = { t: Math.floor(t / 1000) * 1000, raf: String(veri.shelf_id).trim(), durum: String(veri.status ?? "success"), tespitler: [], uyarilar: [] };
+  veri.items.forEach((k, i) => {
+    const skor = Number(k?.freshness_score);
+    if (!k || k.product_id == null || k.product_type == null || k.freshness_score == null || Number.isNaN(skor)) { rapor.uyarilar.push(`${i + 1}. kayıt okunamadı, atlandı`); return; }
+    const td = { pid: String(k.product_id).trim(), tur: String(k.product_type).trim(), kosul: String(k.condition ?? ""), skor, alert: Boolean(k.alert) };
+    if (skor < 0 || skor > 1) { rapor.uyarilar.push(`${td.pid}: skor 0-1 aralığında değil (${skor}), atlandı`); return; }
+    td.bozuk = td.alert || skor < AYAR.bozulma || kosulBozuk(td.kosul);
+    if ((skor < AYAR.bozulma) !== kosulBozuk(td.kosul)) rapor.uyarilar.push(`${td.pid}: etiket '${td.kosul}' ile skor ${skor} çelişiyor`);
+    rapor.tespitler.push(td);
+  });
+  if (veri.total_items != null && veri.total_items !== veri.items.length) rapor.uyarilar.push(`total_items=${veri.total_items} ama listede ${veri.items.length} ürün var`);
+  return rapor;
+}
+function urunBul(tur) {
+  const gtin = AYAR.urunEsleme[normalize(tur)];
+  if (gtin) return urun(gtin);
+  return S.urunler.find(u => normalize(u.ad) === normalize(tur));
+}
+function etiketLotu(pid, gtin) {
+  const e = S.etiketler[pid];
+  const lot = e && S.lotlar.find(l => l.id === e.lotId);
+  if (e && (e.durum === "AYIKLANDI" || (e.gtin === gtin && lot && lot.durum === "AKTIF"))) return e.lotId;
+  const sira = aktifLotlar(gtin).sort((a, b) => a.etkin - b.etkin || a.id - b.id);
+  const lotId = sira.length ? sira[0].id : null;
+  S.etiketler[pid] = { gtin, lotId, durum: "AKTIF", ayiklama: null };
+  return lotId;
+}
+function raporKaydet(rapor, kaynak) {
+  if (S.taramalar.some(g => g.raf === rapor.raf && g.t === rapor.t)) return null;
+  const uy = [...rapor.uyarilar];
+  if (rapor.durum !== "success") uy.unshift(`Görüntü yazılımı hata bildirdi (status=${rapor.durum})`);
+  const rafGrubu = AYAR.rafGrubu[rapor.raf];
+  if (!rafGrubu) uy.push(`${rapor.raf} tanımsız raf (config.RAF_GRUBU'na eklenmeli)`);
+  const tarama = { id: ++S.seq.tarama, t: rapor.t, alinma: SAAT(), raf: rapor.raf, durum: rapor.durum, n: rapor.tespitler.length, kaynak, mesaj: uy };
+  S.taramalar.push(tarama);
+  for (const td of rapor.tespitler) {
+    const u = urunBul(td.tur);
+    if (!u) uy.push(`${td.pid}: '${td.tur}' ürün ana verisinde yok`);
+    else {
+      if (etiketLotu(td.pid, u.gtin) == null) uy.push(`${td.pid}: ${u.ad} için stokta aktif lot yok`);
+      if (rafGrubu && u.grup !== rafGrubu) uy.push(`${td.pid}: ${u.ad} ${u.grup} grubunda, ${rapor.raf} ise ${rafGrubu} koridoru – yanlış raf`);
+    }
+    S.tespitler.push({ id: ++S.seq.tespit, taramaId: tarama.id, pid: td.pid, tur: td.tur, gtin: u ? u.gtin : null, kosul: td.kosul, skor: td.skor, bozuk: td.bozuk });
+  }
+  return tarama;
+}
+function sonTespitler() {
+  const taramaT = Object.fromEntries(S.taramalar.map(g => [g.id, g]));
+  const son = {};
+  for (const t of S.tespitler) {
+    const g = taramaT[t.taramaId], o = son[t.pid];
+    if (!o || g.t > o.tarama.t || (g.t === o.tarama.t && t.id > o.id)) son[t.pid] = { ...t, tarama: g };
+  }
+  return Object.values(son);
+}
+function lotTazelikleri() {
+  const m = {};
+  for (const t of sonTespitler()) {
+    const e = S.etiketler[t.pid];
+    if (!e || e.durum !== "AKTIF" || e.lotId == null) continue;
+    if (!m[e.lotId] || t.skor < m[e.lotId].skor) m[e.lotId] = { skor: t.skor, t: t.tarama.t };
+  }
+  return m;
+}
+const ayiklanacaklar = () => sonTespitler().filter(t => t.bozuk && S.etiketler[t.pid]?.durum === "AKTIF").sort((a, b) => a.skor - b.skor);
+function bozulanlariAyikla() {
+  const z = SAAT(), lotlar = Object.fromEntries(aktifLotlar().map(l => [l.id, l])), sonuc = [];
+  for (const t of ayiklanacaklar()) {
+    const e = S.etiketler[t.pid], lot = lotlar[e.lotId];
+    if (lot && lot.miktar > 0) {
+      const m = Math.min(AYAR.birim, lot.miktar);
+      stoktanDus(z, lot, m, "IMHA");
+      lot.miktar -= m;
+    }
+    e.durum = "AYIKLANDI"; e.ayiklama = z;
+    sonuc.push([t, lot]);
+  }
+  return sonuc;
+}
+function goruntuUyarilari() {
+  const liste = [], simdi = SAAT();
+  for (const t of sonTespitler().sort((a, b) => a.skor - b.skor)) {
+    const u = t.gtin ? urun(t.gtin) : null, e = S.etiketler[t.pid];
+    const etiket = `${t.tarama.raf} · ${t.pid} (${u ? u.ad : t.tur})`;
+    if (e && e.durum === "AYIKLANDI") {
+      if (t.tarama.t > e.ayiklama) liste.push(["UYARI", `${etiket}: ayıklandı olarak işaretli ama son taramada hâlâ rafta`]);
+      continue;
+    }
+    if (t.bozuk) liste.push(["KRITIK", `${etiket}: bozulmuş (tazelik ${sayi(t.skor, 2)}), raftan ayıklanmalı`]);
+    else if (t.skor < AYAR.dikkat) liste.push(["UYARI", `${etiket}: tazelik düşük (${sayi(t.skor, 2)}), öncelikli sevk`]);
+    if (!u) liste.push(["UYARI", `${etiket}: ürün türü ana veride tanımsız`]);
+    else if (AYAR.rafGrubu[t.tarama.raf] && AYAR.rafGrubu[t.tarama.raf] !== u.grup) liste.push(["UYARI", `${etiket}: yanlış raf, ürün ${u.grup} koridoruna ait`]);
+  }
+  const sonTarama = {};
+  for (const g of S.taramalar) if (!sonTarama[g.raf] || g.t > sonTarama[g.raf].t || (g.t === sonTarama[g.raf].t && g.id > sonTarama[g.raf].id)) sonTarama[g.raf] = g;
+  for (const g of Object.values(sonTarama)) {
+    if (g.durum !== "success") liste.push(["UYARI", `${g.raf}: son taramada görüntü yazılımı hata verdi (${g.durum})`]);
+    const saat = (simdi - g.t) / SAAT_MS;
+    if (saat > AYAR.bayatSaat) liste.push(["BILGI", `${g.raf}: son kamera taraması ${Math.round(saat)} saat önce`]);
+  }
+  return liste;
+}
+function bozulmaOrani(gun = 30) {
+  const bas = SAAT() - gun * GUN, taramaT = Object.fromEntries(S.taramalar.map(g => [g.id, g.t]));
+  const tum = new Set(), bozuk = new Set();
+  for (const t of S.tespitler) if (taramaT[t.taramaId] >= bas) { tum.add(t.pid); if (t.bozuk) bozuk.add(t.pid); }
+  return tum.size ? bozuk.size / tum.size : 0;
+}
+function kameraTaramasiSimuleEt() {
+  // Raftaki (ayıklanmamış) etiketler yeniden görülür ve biraz bozulur; 1-3 yeni ürün eklenir.
+  const r = canliRnd, items = [];
+  for (const t of sonTespitler()) {
+    const e = S.etiketler[t.pid];
+    if (t.tarama.raf !== "RAF-01" || !e || e.durum !== "AKTIF") continue;
+    const skor = yuvarla(Math.max(0.05, t.skor - r.uniform(0, 0.12)), 2);
+    items.push({ product_id: t.pid, product_type: t.tur, freshness_score: skor });
+  }
+  const yeni = r.int(1, 3);
+  for (let i = 0; i < yeni; i++) {
+    const tur = r() < 0.8 ? "Elma" : "Portakal";
+    const onek = `URN-${normalize(tur)}-`;
+    const gorulen = new Set([...Object.keys(S.etiketler), ...S.tespitler.map(t => t.pid), ...items.map(x => x.product_id)]);
+    const no = [...gorulen].filter(p => p.startsWith(onek)).length + 1;
+    const z = r();
+    const skor = z < 0.6 ? r.uniform(0.7, 0.98) : z < 0.8 ? r.uniform(0.5, 0.7) : r.uniform(0.1, 0.49);
+    items.push({ product_id: `${onek}${String(no).padStart(3, "0")}`, product_type: tur, freshness_score: yuvarla(skor, 2) });
+  }
+  for (const k of items) { k.condition = k.freshness_score < AYAR.bozulma ? "Bozulmus" : "Taze"; k.alert = k.freshness_score < AYAR.bozulma; }
+  let t = Math.floor(SAAT() / 1000) * 1000;
+  while (S.taramalar.some(g => g.raf === "RAF-01" && g.t === t)) t += 1000;
+  return { timestamp: new Date(t).toISOString(), status: "success", shelf_id: "RAF-01", total_items: items.length, items };
+}
+
+// ============================================================ talep tahmini (talep_tahmini.py)
+function gunlukTalep(gtin) {
+  const bugun = new Date(gunBasi(SAAT())), idx = {}, seri = [];
+  for (let i = AYAR.tahminGecmis; i > 0; i--) { const d = new Date(bugun); d.setDate(d.getDate() - i); idx[gunAnahtar(d)] = seri.length; seri.push(0); }
+  const bas = new Date(bugun); bas.setDate(bas.getDate() - AYAR.tahminGecmis);
+  for (const h of S.hareketler) {
+    if (h.gtin !== gtin || h.tur !== "CIKIS" || h.t < bas.getTime() || h.t >= bugun.getTime()) continue;
+    const i = idx[gunAnahtar(new Date(h.t))];
+    if (i !== undefined) seri[i] += h.miktar;
+  }
+  return seri;
+}
+const bosTahmin = s => s.map(() => null);
+const YONTEMLER = {
+  "Hareketli Ort. (7)": (s, u) => { const n = 7, t = bosTahmin(s); for (let i = n; i < s.length; i++) t[i] = ort(s.slice(i - n, i)); return [t, Array(u).fill(ort(s.slice(-n)))]; },
+  "Ağırlıklı H.O. (7)": (s, u) => { const n = 7, w = p => p.reduce((x, v, i) => x + (i + 1) * v, 0) / 28, t = bosTahmin(s); for (let i = n; i < s.length; i++) t[i] = w(s.slice(i - n, i)); return [t, Array(u).fill(w(s.slice(-n)))]; },
+  "Üstel Düzeltme (α=0.3)": (s, u) => { const a = 0.3, t = bosTahmin(s); let sv = s[0]; for (let i = 1; i < s.length; i++) { t[i] = sv; sv = a * s[i] + (1 - a) * sv; } return [t, Array(u).fill(sv)]; },
+  "Holt (α=0.3, β=0.1)": (s, u) => { const a = 0.3, b = 0.1, t = bosTahmin(s); let sv = s[0], tr = s[1] - s[0]; for (let i = 1; i < s.length; i++) { t[i] = Math.max(sv + tr, 0); const on = sv; sv = a * s[i] + (1 - a) * (sv + tr); tr = b * (sv - on) + (1 - b) * tr; } return [t, Array.from({ length: u }, (_, h) => Math.max(sv + (h + 1) * tr, 0))]; },
+  "Mevsimsel Naif (7)": (s, u) => { const d = 7, t = bosTahmin(s); for (let i = d; i < s.length; i++) t[i] = s[i - d]; return [t, Array.from({ length: u }, (_, h) => s[s.length - d + (h % d)])]; },
+};
+function hataOlculeri(gercek, tahmin, son = AYAR.degerlendirme) {
+  const g = gercek.slice(-son), t = tahmin.slice(-son), ciftler = [];
+  g.forEach((x, i) => { if (t[i] != null) ciftler.push([x, t[i]]); });
+  if (!ciftler.length) return null;
+  const e = ciftler.map(([x, y]) => x - y);
+  const mad = ort(e.map(Math.abs)), rmse = Math.sqrt(ort(e.map(x => x * x)));
+  const yuzde = ciftler.filter(([x]) => x > 0).map(([x, y]) => Math.abs(x - y) / x);
+  return { MAD: mad, RMSE: rmse, MAPE: yuzde.length ? 100 * ort(yuzde) : NaN, IS: mad ? e.reduce((x, y) => x + y, 0) / mad : 0 };
+}
+function siparisOnerisi(stok, d, sigma, L, omur) {
+  const ss = AYAR.z * sigma * Math.sqrt(L), rop = d * L + ss;
+  let miktar = 0;
+  if (stok <= rop) miktar = Math.max(0, Math.ceil(Math.min(d * (L + AYAR.gozdenGecirme) + ss - stok, d * omur)));
+  return { ROP: rop, SS: ss, kalanGun: d > 0 ? stok / d : Infinity, siparis: miktar };
+}
+function tahminRaporu() {
+  const stok = stokMiktarlari(), rapor = [];
+  for (const u of [...S.urunler].sort((a, b) => a.grup.localeCompare(b.grup) || a.ad.localeCompare(b.ad, "tr"))) {
+    const seri = gunlukTalep(u.gtin);
+    if (!seri.some(x => x)) continue;
+    const sonuclar = Object.entries(YONTEMLER).map(([ad, f]) => { const [gecmis, gelecek] = f(seri, AYAR.ufuk); const o = hataOlculeri(seri, gecmis); return o && { yontem: ad, gecmis, gelecek, ...o }; }).filter(Boolean).sort((a, b) => a.MAD - b.MAD);
+    if (!sonuclar.length) continue;
+    const en = sonuclar[0], d = ort(en.gelecek), st = stok[u.gtin] || 0;
+    rapor.push({ gtin: u.gtin, urun: u.ad, grup: u.grup, seri, stok: st, ...en, ...siparisOnerisi(st, d, en.RMSE, u.tedarik, u.omur) });
+  }
+  return rapor;
+}
+
+// ============================================================ örnek veri (ornek_veri.py)
+function ornekOlustur() {
+  S = bosDurum();
+  const simdi = Date.now(), r = rng(42);
+  S.urunler = URUNLER.map(([gtin, ad, grup, omur, renk, minStok, tedarik, ortTalep]) => ({ gtin, ad, grup, omur, renk, minStok, tedarik, ortTalep }));
+  for (const u of S.urunler) { // 90 günlük tüketim: hafif trend + haftalık mevsimsellik + gürültü
+    const trend = r.uniform(-0.002, 0.004);
+    for (let geri = 90; geri > 0; geri--) {
+      const gun = new Date(simdi); gun.setDate(gun.getDate() - geri); gun.setHours(14, 0, 0, 0);
+      const bek = u.ortTalep * HAFTALIK[(gun.getDay() + 6) % 7] * (1 + trend * (90 - geri));
+      const m = Math.max(0, Math.round(r.gauss(bek, Math.sqrt(bek))));
+      if (m) hareket(gun.getTime(), u.gtin, null, "CIKIS", m);
+    }
+  }
+  for (let saat = 72; saat >= 0; saat--) { // 72 saatlik sensör geçmişi; G3'te 30-34 saat önce soğutma arızası
+    const t = simdi - saat * SAAT_MS;
+    for (const g of GRUPLAR) {
+      let [s, n] = olc(g.kod, r, 0);
+      if (g.kod === "G3" && saat >= 30 && saat <= 34) s = 12.0;
+      S.sensor[g.kod].push([t, s, n]);
+    }
+  }
+  const giris = simdi - 48 * SAAT_MS; // mevcut lotlar 48 saat önce girmiş
+  SAAT = () => giris; renkRnd = r;
+  for (const u of S.urunler) {
+    for (let i = 0; i < (u.omur > 60 ? 2 : 3); i++) {
+      let yas = r.uniform(0.05, 0.9) * u.omur;
+      if (r() < 0.85) yas = Math.min(yas, u.omur - 2 - r.uniform(0.3, 1.5));
+      const uretim = new Date(giris - yas * GUN), miktar = r.int(Math.floor(u.minStok / 2) + 1, u.minStok * 2);
+      barkodOkut(`(01)${u.gtin}(11)${yymmdd(uretim)}(10)L${r.int(1000, 9999)}(30)${miktar}`, "GIRIS");
+    }
+  }
+  SAAT = () => simdi;
+  const ornek = JSON.parse(JSON.stringify(EKIP_CIKTISI)); // ekibin taraması, 1 saat önce yapılmış gibi
+  ornek.timestamp = new Date(simdi - SAAT_MS).toISOString();
+  raporKaydet(raporCoz(ornek), "örnek veri (ekip çıktısı)");
+  yenidenKonumlandir();
+  SAAT = () => Date.now(); renkRnd = canliRnd;
+  kaydet();
+}
+
+// ============================================================ arayüz
+const UI = { islem: "GIRIS", son: null, seciliGoz: null, tasima: null, seciliTarama: null, goruntuMesaj: null, seciliTahmin: null, tahminCache: null, sifirlaOnay: false };
+const SEKMELER = [
+  ["genel", "Genel Bakış"], ["okutma", "Barkod Okutma"], ["yerlesim", "Depo Yerleşimi"],
+  ["stok", "Stok & Uyarılar"], ["goruntu", "Görüntü İşleme"], ["tahmin", "Talep Tahmini"],
+];
+const $ = id => document.getElementById(id);
+const aktifSekme = () => { const h = location.hash.slice(1); return SEKMELER.some(([k]) => k === h) ? h : "genel"; };
+let bildirimZamani;
+function bildir(m) { const b = $("bildirim"); b.textContent = m; b.hidden = false; clearTimeout(bildirimZamani); bildirimZamani = setTimeout(() => { b.hidden = true; }, 4200); }
+const hap = (sinif, metin) => `<span class="hap ${sinif}">${esc(metin)}</span>`;
+const durumHap = d => hap(`d-${d}`, ETIKET[d]);
+
+function sensorCiz() {
+  $("sensorler").innerHTML = `<span class="etiket">Bölmeler</span>` + GRUPLAR.map(g => {
+    const o = sonOkuma(g.kod), iyi = o && kosulUygun(g.kod, o[1], o[2]);
+    return `<span class="bolme ${iyi ? "" : "kotu"}" title="${esc(g.ad)}: ${g.smin}…${g.smax} °C, %${g.nmin}…${g.nmax}"><b>${g.kod}</b> ${o ? `${sayi(o[1])}°C %${Math.round(o[2])}` : "–"}</span>`;
+  }).join("");
+}
+function sekmeCiz() {
+  const a = aktifSekme(), kritik = uyarilar().filter(u => u[0] === "KRITIK").length, ayik = ayiklanacaklar().length;
+  $("sekmeler").innerHTML = SEKMELER.map(([k, ad]) => {
+    const rz = k === "stok" && kritik ? `<span class="rozet">${kritik}</span>` : k === "goruntu" && ayik ? `<span class="rozet">${ayik}</span>` : "";
+    return `<a href="#${k}" ${k === a ? 'aria-current="page"' : ""}>${ad}${rz}</a>`;
+  }).join("");
+}
+function ciz() {
+  sensorCiz(); sekmeCiz();
+  const a = aktifSekme();
+  $("icerik").innerHTML = { genel: genelCiz, okutma: okutmaCiz, yerlesim: yerlesimCiz, stok: stokCiz, goruntu: goruntuCiz, tahmin: tahminCiz }[a]();
+  if (a === "okutma") $("barkod")?.focus({ preventScroll: true });
+}
+function degisti() { UI.tahminCache = null; kaydet(); ciz(); }
+
+// ---------- genel
+function genelCiz() {
+  const lotlar = aktifLotlar(), stok = Object.values(stokMiktarlari()).reduce((x, y) => x + y, 0);
+  const uy = uyarilar(), kritik = uy.filter(u => u[0] === "KRITIK").length;
+  return `
+  <section class="panel">
+    <p class="giris-metni">Bu sistem soğuk zincirdeki gıda deposunu yönetir. Ürün barkodla girdiğinde grubunu, raf ömrünü ve FEFO durumunu kendisi belirler ve ürünü uygun göze yerleştirir. Sensörlerden ve raf kamerasından gelen verilerle ürünün gerçek tazeliğini takip eder, bozulmaya yakın ürünü öne alır. Geçmiş tüketimden talep tahmini yapıp sipariş önerir.</p>
+  </section>
+  <div class="kpiler">
+    <div class="kpi"><span class="ad">Aktif lot</span><span class="deger">${lotlar.length}</span><span class="alt">${GRUPLAR.length} soğutma bölmesinde</span></div>
+    <div class="kpi"><span class="ad">Satılabilir stok</span><span class="deger">${stok.toLocaleString("tr-TR")}</span><span class="alt">birim, SKT'si geçenler hariç</span></div>
+    <div class="kpi ${kritik ? "kritik" : ""}"><span class="ad">Kritik uyarı</span><span class="deger">${kritik}</span><span class="alt">${uy.length} uyarının içinde</span></div>
+    <div class="kpi"><span class="ad">İsraf oranı (30 gün)</span><span class="deger">%${sayi(100 * israfOrani(), 2)}</span><span class="alt">imha ÷ (çıkış + imha)</span></div>
+    <div class="kpi"><span class="ad">Kamerada bozulma (30 gün)</span><span class="deger">%${Math.round(100 * bozulmaOrani())}</span><span class="alt">taranan ürünlerden bozuk çıkanlar</span></div>
+  </div>
+  <section class="panel">
+    <h3>Bir ürünün sistemdeki yolu</h3>
+    <div class="akis">
+      <div class="adim"><b>Okutma</b><span>GS1 barkodundan GTIN, lot, üretim tarihi ve miktar okunur.</span></div>
+      <div class="adim"><b>Sınıflandırma</b><span>Saklama grubu (G1–G6), renk sensörüyle olgunluk, kalan ömre göre Eski/Orta/Yeni.</span></div>
+      <div class="adim"><b>Yerleşim</b><span>Eski üretim kapıya en yakın göze, yeni üretim en arkaya.</span></div>
+      <div class="adim"><b>İzleme</b><span>Sıcaklık sapması (Q10) ve kamera tazelik skoru etkin SKT'yi kısaltır.</span></div>
+      <div class="adim"><b>FEFO çıkış</b><span>Önce son kullanma tarihi en yakın lot çıkar; yanlış lot okutulursa işlem engellenir.</span></div>
+      <div class="adim"><b>Tahmin ve sipariş</b><span>5 yöntem karşılaştırılır, emniyet stoğu ve yeniden sipariş noktası hesaplanır.</span></div>
+    </div>
+  </section>
+  <div class="iki">
+    <section class="panel">
+      <div class="arac"><h2>Öncelikli uyarılar</h2><span class="bosluk"></span><a class="btn" href="#stok">Tümünü gör</a></div>
+      ${uyariListesi(uy.slice(0, 7))}
+    </section>
+    <section class="panel">
+      <h2>Nasıl denenir</h2>
+      <div class="bilgi-kutu"><ul>
+        <li><b>Barkod Okutma</b>: “Demo barkod üret”e bas, Enter ile okut. Çıkış modunda FEFO'yu dene.</li>
+        <li><b>Depo Yerleşimi</b>: bir göze tıkla, lot detayını gör; “Yeniden konumlandır” ile taşıma listesi al.</li>
+        <li><b>Görüntü İşleme</b>: “Kamera taraması simüle et” ya da ekibin JSON çıktısını yükle, sonra bozukları ayıkla.</li>
+        <li><b>Talep Tahmini</b>: bir ürün seç, gerçek tüketim ile 7 günlük tahmini grafikte karşılaştır.</li>
+      </ul></div>
+      <p class="not">Sağ üstteki düğme demo verisini baştan oluşturur. Yaptığın işlemler yalnızca bu tarayıcıda saklanır.</p>
+    </section>
+  </div>`;
+}
+function uyariListesi(liste) {
+  if (!liste.length) return `<p class="not">Uyarı yok.</p>`;
+  return `<ul class="uyarilar">${liste.map(([s, m]) => `<li>${hap(`s-${s}`, SEVIYE_AD[s])}<span>${esc(m)}</span></li>`).join("")}</ul>`;
+}
+
+// ---------- okutma
+function okutmaCiz() {
+  const s = UI.son, l = s?.lot;
+  const alanlar = s ? [
+    ["Okutma zamanı", fDTs(s.zaman)], ["İşlem", s.islem === "GIRIS" ? "Giriş" : "Çıkış (FEFO)"],
+    ["Ürün", s.urunAdi || "–"], ["Grup / bölme", s.grup ? `${s.grup} – ${G[s.grup].ad}` : "–"],
+    ["Lot / miktar", l ? `${l.lotNo} · ${s.miktar} birim (lotta ${l.miktar})` : "–"],
+    ["Üretim → etkin SKT", l ? `${fD(l.uretim)} → ${fDT(l.etkin)}${l.etkin < l.skt ? " (sıcaklık/tazelik cezası düşüldü)" : ""}` : "–"],
+    ["Kalan süre", l ? `${sayi(l.kalan)} gün` : "–"], ["Renk sınıfı", l ? (l.renk || "uygulanmaz") : "–"],
+    ["Sensör", s.sicaklik != null ? `${s.sicaklik} °C, %${s.nem} nem · ${s.kosulUygun ? "uygun" : "KOŞUL DIŞI"}` : "–"],
+    ["Konum", l ? (l.konum || "TAMPON ALAN") : "–"],
+  ] : [];
+  const gecmis = S.okutmalar.slice(-15).reverse();
+  const lotNo = Object.fromEntries(S.lotlar.map(x => [x.id, x.lotNo])), konum = lotKonumlari();
+  return `
+  <section class="panel">
+    <form class="okut-form" id="okutForm" autocomplete="off">
+      <input type="text" id="barkod" placeholder="(01)08690000000062(11)261118(10)L1234(30)12" aria-label="Barkod" spellcheck="false">
+      <div class="secim" role="radiogroup" aria-label="İşlem">
+        <input type="radio" name="islem" id="islemGiris" value="GIRIS" ${UI.islem === "GIRIS" ? "checked" : ""}><label for="islemGiris">Giriş</label>
+        <input type="radio" name="islem" id="islemCikis" value="CIKIS" ${UI.islem === "CIKIS" ? "checked" : ""}><label for="islemCikis">Çıkış (FEFO)</label>
+      </div>
+      <button type="submit" class="ana">Okut</button>
+      <button type="button" data-a="demo-barkod">Demo barkod üret</button>
+    </form>
+    <p class="not">Barkod okuyucu klavye gibi çalışır ve Enter gönderir. Desteklenen biçimler: düz EAN/GTIN ya da GS1-128 (AI 01, 10, 11, 15, 17, 30).</p>
+  </section>
+  <section class="panel">
+    <h2>Son okutma</h2>
+    ${s ? `<div class="sonuc">
+      <div style="display:grid;gap:10px;min-width:0">
+        <dl class="alanlar">${alanlar.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>
+        <p class="${s.basarili ? "mesaj-ok" : "mesaj-hata"}">${esc(s.mesaj)}</p>
+        ${s.uyarilar.map(u => `<p class="uyari-satir">⚠ ${esc(u)}</p>`).join("")}
+      </div>
+      <div class="buyuk-durum" style="background:${l ? `var(--${{ ESKI: "eski", ORTA: "orta", YENI: "yeni", SKT_GECTI: "skt" }[l.durum]})` : "var(--bilgi)"}">${l ? ETIKET[l.durum] : s.basarili ? "–" : "HATA"}</div>
+    </div>` : `<p class="not">Henüz okutma yapılmadı. Bir barkod okut ya da “Demo barkod üret”i dene.</p>`}
+  </section>
+  <section class="panel">
+    <h2>Okutma geçmişi</h2>
+    <div class="tablo-kap"><table>
+      <thead><tr><th>Zaman</th><th>İşlem</th><th>Ürün</th><th>Lot</th><th>Durum</th><th>Konum</th><th>Sonuç</th></tr></thead>
+      <tbody>${gecmis.map(o => `<tr class="${o.basarili ? "" : "hata"}"><td>${fDTs(o.t)}</td><td>${o.islem === "GIRIS" ? "Giriş" : "Çıkış"}</td><td>${esc(urun(o.gtin)?.ad || "–")}</td><td class="mono">${esc(lotNo[o.lotId] || "–")}</td><td>${o.durum ? durumHap(o.durum) : "–"}</td><td class="mono">${esc(konum[o.lotId] || "–")}</td><td class="uzun">${esc(o.mesaj)}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </section>`;
+}
+function demoBarkod() {
+  const u = S.urunler[Math.floor(Math.random() * S.urunler.length)];
+  let b;
+  if (UI.islem === "CIKIS") b = `(01)${u.gtin}(30)${1 + Math.floor(Math.random() * 5)}`;
+  else {
+    const uretim = new Date(Date.now() - Math.random() * 0.9 * u.omur * GUN);
+    b = `(01)${u.gtin}(11)${yymmdd(uretim)}(10)L${1000 + Math.floor(Math.random() * 9000)}(30)${1 + Math.floor(Math.random() * 20)}`;
+  }
+  const g = $("barkod"); g.value = b; g.focus();
+}
+
+// ---------- yerleşim
+const DURUM_VAR = { ESKI: "var(--eski)", ORTA: "var(--orta)", YENI: "var(--yeni)", SKT_GECTI: "var(--skt)" };
+function yerlesimCiz() {
+  const lotlar = Object.fromEntries(aktifLotlar().map(l => [l.id, l]));
+  let h = `<div class="kapi">KAPI</div><div></div>`;
+  for (const [bant, [a, b]] of Object.entries(BANTLAR)) h += `<div class="bant-bas" style="grid-column:${a + 2} / span ${b - a + 1};color:${DURUM_VAR[bant]};border-color:${DURUM_VAR[bant]}">${ETIKET[bant]} bandı</div>`;
+  GRUPLAR.forEach((g, i) => {
+    h += `<div class="koridor-ad" style="grid-row:${i + 2};grid-column:2"><b>${g.kod} ${esc(g.ad)}</b><span>${g.smin}…${g.smax} °C</span></div>`;
+    for (let sira = 1; sira <= AYAR.sira; sira++) {
+      const k = goz(g.kod, sira), l = lotlar[S.konum[k]];
+      h += `<button type="button" class="goz ${l ? "dolu" : ""} ${UI.seciliGoz === k ? "secili" : ""}" data-a="goz" data-k="${k}" style="grid-row:${i + 2};grid-column:${sira + 2};${l ? `background:${DURUM_VAR[l.durum]}` : ""}" aria-label="${k}${l ? ` ${esc(l.ad)}` : " boş"}">
+        <span class="kod">${k}</span>${l ? `<span class="ad">${esc(l.ad)}</span><span class="sayi">${l.miktar} · ${sayi(l.kalan)} g</span>` : ""}</button>`;
+    }
+  });
+  let detay = `<p class="not">Bir göze tıkla.</p>`;
+  if (UI.seciliGoz) {
+    const l = lotlar[S.konum[UI.seciliGoz]];
+    detay = l ? `<div class="bilgi-kutu"><b>${UI.seciliGoz} · ${esc(l.ad)} · lot ${esc(l.lotNo)}</b>
+      <span>${l.miktar} birim · etkin SKT ${fDT(l.etkin)} (${sayi(l.kalan)} gün) · ${durumHap(l.durum)} · renk ${l.renk || "–"} · kamera tazeliği ${l.tazelik == null ? "–" : sayi(l.tazelik, 2)}</span></div>`
+      : `<p class="not">${UI.seciliGoz}: boş (${ETIKET[bantOf(+UI.seciliGoz.slice(3))]} bandı)</p>`;
+  }
+  const tampon = aktifLotlar().filter(l => !l.konum && l.durum !== "SKT_GECTI");
+  return `
+  <section class="panel">
+    <div class="arac">
+      <button type="button" class="ana" data-a="konumlandir">FEFO'ya göre yeniden konumlandır</button>
+      <span class="bosluk"></span>
+      <div class="lejant">${["ESKI", "ORTA", "YENI", "SKT_GECTI"].map(durumHap).join("")}</div>
+    </div>
+    <div class="depo-kap"><div class="depo">${h}</div></div>
+    ${detay}
+    ${tampon.length ? `<p class="not">Tampon alanda ${tampon.length} lot var: ${tampon.map(l => esc(`${l.ad} (${l.lotNo})`)).join(", ")}</p>` : ""}
+  </section>
+  ${UI.tasima ? `<section class="panel"><h2>Taşıma listesi</h2>${UI.tasima.length ? `<div class="tablo-kap kaydir"><table><thead><tr><th>Ürün</th><th>Lot</th><th>Durum</th><th>Eski konum</th><th>Yeni konum</th></tr></thead><tbody>${UI.tasima.map(([l, e, y]) => `<tr><td>${esc(l.ad)}</td><td class="mono">${esc(l.lotNo)}</td><td>${durumHap(l.durum)}</td><td class="mono">${e || "tampon"}</td><td class="mono">${y || (l.durum === "SKT_GECTI" ? "karantina" : "tampon")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="not">Tüm lotlar doğru bantta, taşıma gerekmiyor.</p>`}</section>` : ""}`;
+}
+
+// ---------- stok
+function stokCiz() {
+  const lotlar = aktifLotlar().sort((a, b) => a.grup.localeCompare(b.grup) || a.ad.localeCompare(b.ad, "tr") || a.etkin - b.etkin);
+  const dolan = lotlar.filter(l => l.durum === "SKT_GECTI").length;
+  return `
+  <section class="panel">
+    <div class="arac">
+      <button type="button" class="tehlike" data-a="imha" ${dolan ? "" : "disabled"}>SKT geçenleri imha et${dolan ? ` (${dolan})` : ""}</button>
+      <span class="bosluk"></span>
+      <b class="sayi">Son 30 gün israf oranı: %${sayi(100 * israfOrani(), 2)}</b>
+    </div>
+    <div class="tablo-kap kaydir"><table>
+      <thead><tr><th>Ürün</th><th>Grup</th><th>Lot</th><th>Renk</th><th>Tazelik</th><th>Üretim</th><th>Etkin SKT</th><th>Kalan (gün)</th><th>Durum</th><th>Miktar</th><th>Konum</th></tr></thead>
+      <tbody>${lotlar.map(l => `<tr><td>${esc(l.ad)}</td><td>${l.grup}</td><td class="mono">${esc(l.lotNo)}</td><td>${l.renk || "–"}</td><td>${l.tazelik == null ? "–" : sayi(l.tazelik, 2)}</td><td>${fD(l.uretim)}</td><td>${fDT(l.etkin)}${l.etkin < l.skt ? " *" : ""}</td><td class="yazi-${l.durum}">${sayi(l.kalan)}</td><td>${durumHap(l.durum)}</td><td>${l.miktar}</td><td class="mono">${l.konum || "TAMPON"}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="not">* Etkin SKT, sıcaklık sapması (Q10) ya da kamera tazelik cezası nedeniyle nominal SKT'den erken.</p>
+  </section>
+  <section class="panel"><h2>Uyarılar</h2>${uyariListesi(uyarilar())}</section>`;
+}
+
+// ---------- görüntü
+function goruntuCiz() {
+  const taramalar = [...S.taramalar].sort((a, b) => b.t - a.t || b.id - a.id);
+  if (!taramalar.some(g => g.id === UI.seciliTarama)) UI.seciliTarama = taramalar[0]?.id ?? null;
+  const secili = taramalar.find(g => g.id === UI.seciliTarama);
+  const lotNo = Object.fromEntries(S.lotlar.map(x => [x.id, x.lotNo])), konum = lotKonumlari();
+  const tespitler = secili ? S.tespitler.filter(t => t.taramaId === secili.id).sort((a, b) => a.skor - b.skor) : [];
+  const ayik = ayiklanacaklar().length, m = UI.goruntuMesaj;
+  return `
+  <section class="panel">
+    <div class="arac">
+      <button type="button" class="ana" data-a="tarama-simule">Kamera taraması simüle et</button>
+      <label class="btn" for="jsonDosya">JSON dosyası yükle</label>
+      <input type="file" id="jsonDosya" accept=".json,application/json" hidden>
+      <button type="button" data-a="ekip-ciktisi">Ekibin örnek çıktısını yükle (13.11)</button>
+      <span class="bosluk"></span>
+      <button type="button" class="tehlike" data-a="ayikla" ${ayik ? "" : "disabled"}>Bozulanları ayıkla (imha)${ayik ? ` · ${ayik}` : ""}</button>
+    </div>
+    <p class="not">Gerçek sistemde görüntü yazılımı rafın son durumunu <code>depo_son_durum.json</code> dosyasına yazar, WMS bu dosyayı 30 saniyede bir okur. Kamerada bozulma oranı (30 gün): <b class="sayi">%${Math.round(100 * bozulmaOrani())}</b>. Tazelik ${AYAR.bozulma}'in altındaysa ürün bozuk sayılır; ${AYAR.dikkat}'nin altındaysa lot öncelikli sevke alınır.</p>
+    <details><summary>JSON'u yapıştırarak gönder</summary>
+      <div style="display:grid;gap:8px;margin-top:8px">
+        <textarea id="jsonMetin" spellcheck="false" aria-label="Görüntü işleme JSON çıktısı">${esc(JSON.stringify(EKIP_CIKTISI, null, 2))}</textarea>
+        <div><button type="button" data-a="json-isle">İşle</button></div>
+      </div>
+    </details>
+    ${m ? `<div class="bilgi-kutu ${m.tur}"><b>${esc(m.baslik)}</b>${m.satirlar.length ? `<ul>${m.satirlar.map(s => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}</div>` : ""}
+  </section>
+  <div class="iki">
+    <section class="panel">
+      <h2>Tespit edilen ürünler${secili ? ` · ${esc(secili.raf)} · ${fDTs(secili.t)}` : ""}</h2>
+      ${secili ? `<div class="tablo-kap"><table>
+        <thead><tr><th>Ürün ID (QR)</th><th>Tür</th><th>Sistemdeki ürün</th><th>Lot</th><th>Konum</th><th>Tazelik</th><th>Durum</th></tr></thead>
+        <tbody>${tespitler.map(t => {
+          const e = S.etiketler[t.pid];
+          const [c, ad] = e?.durum === "AYIKLANDI" ? ["ayiklandi", "Ayıklandı"] : t.bozuk ? ["bozuk", "Ayıklanmalı"] : t.skor < AYAR.dikkat ? ["dikkat", "Öncelikli sevk"] : ["taze", "Taze"];
+          return `<tr><td class="mono">${esc(t.pid)}</td><td>${esc(t.tur)}</td><td>${esc(t.gtin ? urun(t.gtin).ad : "TANIMSIZ")}</td><td class="mono">${esc(lotNo[e?.lotId] || "–")}</td><td class="mono">${esc(konum[e?.lotId] || "–")}</td><td class="sayi">${sayi(t.skor, 2)}</td><td>${hap(`t-${c}`, ad)}</td></tr>`;
+        }).join("")}</tbody></table></div>
+        ${secili.mesaj.length ? `<div class="bilgi-kutu"><b>Bu taramadaki notlar</b><ul>${secili.mesaj.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}`
+        : `<p class="not">Henüz tarama yok.</p>`}
+    </section>
+    <section class="panel">
+      <h2>Kamera taramaları</h2>
+      <div class="tablo-kap kaydir"><table>
+        <thead><tr><th>Tarama zamanı</th><th>Raf</th><th>Ürün</th><th>Bozuk</th><th>Kaynak</th></tr></thead>
+        <tbody>${taramalar.map(g => `<tr class="secilebilir ${g.id === UI.seciliTarama ? "secili" : ""}" data-a="tarama-sec" data-id="${g.id}" tabindex="0"><td>${fDTs(g.t)}</td><td>${esc(g.raf)}</td><td>${g.n}</td><td>${S.tespitler.filter(t => t.taramaId === g.id && t.bozuk).length}</td><td>${esc(g.kaynak)}</td></tr>`).join("")}</tbody>
+      </table></div>
+    </section>
+  </div>`;
+}
+function goruntuIsle(veri, kaynak) {
+  let rapor;
+  try { rapor = raporCoz(veri); } catch (e) { UI.goruntuMesaj = { tur: "kotu", baslik: e.message, satirlar: [] }; ciz(); return; }
+  const tarama = raporKaydet(rapor, kaynak);
+  if (!tarama) { UI.goruntuMesaj = { tur: "", baslik: `${rapor.raf} ${fDTs(rapor.t)} taraması zaten işlenmiş.`, satirlar: [] }; ciz(); return; }
+  const bozuk = rapor.tespitler.filter(t => t.bozuk).length;
+  UI.seciliTarama = tarama.id;
+  UI.goruntuMesaj = { tur: bozuk ? "kotu" : "iyi", baslik: `${rapor.raf}: ${rapor.tespitler.length} ürün işlendi, ${bozuk} bozuk.`, satirlar: tarama.mesaj };
+  degisti();
+}
+
+// ---------- tahmin
+function tahminCiz() {
+  const rapor = UI.tahminCache ||= tahminRaporu();
+  if (!rapor.some(r => r.gtin === UI.seciliTahmin)) UI.seciliTahmin = (rapor.find(r => r.siparis) || rapor[0])?.gtin;
+  const sec = rapor.find(r => r.gtin === UI.seciliTahmin);
+  return `
+  <section class="panel">
+    <p class="not">Her ürün için son 60 günün çıkışları alınır, 5 yöntem son 28 günde karşılaştırılır ve MAD'i en küçük olan seçilir. Emniyet stoğu SS = z·RMSE·√L (z = 1,65), yeniden sipariş noktası ROP = d̄·L + SS. Sipariş miktarı raf ömrü boyunca tüketilebilecek miktarla sınırlıdır.</p>
+    <div class="tablo-kap kaydir"><table>
+      <thead><tr><th>Ürün</th><th>En iyi yöntem</th><th>MAD</th><th>MAPE %</th><th>7 gün tahmin</th><th>Stok</th><th>ROP</th><th>Yeterlilik (gün)</th><th>Öneri</th></tr></thead>
+      <tbody>${rapor.map(r => `<tr class="secilebilir ${r.gtin === UI.seciliTahmin ? "secili" : ""}" data-a="tahmin-sec" data-g="${r.gtin}" tabindex="0"><td>${esc(r.urun)}</td><td>${esc(r.yontem)}</td><td>${sayi(r.MAD, 2)}</td><td>${sayi(r.MAPE)}</td><td>${Math.round(r.gelecek.reduce((x, y) => x + y, 0))}</td><td>${r.stok}</td><td>${Math.round(r.ROP)}</td><td>${sayi(r.kalanGun)}</td><td>${r.siparis ? hap("s-KRITIK", `Sipariş ver: ${r.siparis}`) : `<span class="not">Yeterli</span>`}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </section>
+  ${sec ? `<section class="panel"><h2>${esc(sec.urun)} · son 28 gün ve 7 günlük tahmin</h2><div class="grafik">${grafik(sec)}</div></section>` : ""}`;
+}
+function grafik(r) {
+  const W = 880, H = 260, sol = 44, sag = 16, ust = 30, alt = 34;
+  const gercek = r.seri.slice(-28), gecmis = r.gecmis.slice(-28), gelecek = r.gelecek, n = gercek.length + gelecek.length;
+  const tepe = Math.max(...gercek, ...gelecek, 1) * 1.15;
+  const x = i => sol + i * (W - sol - sag) / (n - 1), y = v => H - alt - v / tepe * (H - ust - alt);
+  const yol = pts => pts.map(([i, v], k) => `${k ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const izgara = [0, 0.25, 0.5, 0.75, 1].map(f => { const v = tepe / 1.15 * f; return `<line x1="${sol}" x2="${W - sag}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${sol - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`; }).join("");
+  const xb = x(gercek.length - 0.5);
+  const gecmisPts = gecmis.map((v, i) => [i, v]).filter(([, v]) => v != null);
+  const ileri = [[gercek.length - 1, gercek[gercek.length - 1]], ...gelecek.map((v, i) => [gercek.length + i, v])];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(r.urun)} talep grafiği">
+    ${izgara}
+    <line x1="${xb}" x2="${xb}" y1="${ust}" y2="${H - alt}" stroke="var(--muted)" stroke-dasharray="3 3"/>
+    <text x="${xb}" y="${H - alt + 18}" text-anchor="middle">bugün</text>
+    <text x="${sol}" y="${H - 6}">28 gün önce</text><text x="${W - sag}" y="${H - 6}" text-anchor="end">+7 gün</text>
+    <path d="${yol(gercek.map((v, i) => [i, v]))} L${x(gercek.length - 1)},${y(0)} L${x(0)},${y(0)} Z" fill="var(--accent)" opacity=".1"/>
+    <path d="${yol(gercek.map((v, i) => [i, v]))}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    ${gecmisPts.length > 1 ? `<path d="${yol(gecmisPts)}" fill="none" stroke="var(--orta)" stroke-width="1.3" opacity=".8"/>` : ""}
+    <path d="${yol(ileri)}" fill="none" stroke="var(--orta)" stroke-width="2.4" stroke-dasharray="6 4"/>
+    <circle cx="${x(n - 1)}" cy="${y(gelecek[gelecek.length - 1])}" r="3.5" fill="var(--orta)"/>
+    <g transform="translate(${sol},12)"><rect width="14" height="3" y="-4" fill="var(--accent)"/><text x="20" y="0">gerçek tüketim</text>
+    <rect x="130" width="14" height="3" y="-4" fill="var(--orta)"/><text x="150" y="0">${esc(r.yontem)} (geçmiş ve 7 gün tahmin)</text></g>
+  </svg>`;
+}
+
+// ============================================================ olaylar
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-a]");
+  if (!el) return;
+  const a = el.dataset.a;
+  if (a === "demo-barkod") demoBarkod();
+  else if (a === "goz") { UI.seciliGoz = el.dataset.k; ciz(); }
+  else if (a === "konumlandir") { UI.tasima = yenidenKonumlandir(); bildir(UI.tasima.length ? `${UI.tasima.length} lot için taşıma listesi oluşturuldu.` : "Tüm lotlar doğru bantta."); degisti(); }
+  else if (a === "imha") { const d = suresiDolanlariImhaEt(); bildir(`${d.length} lot imha kaydına alındı (${d.reduce((x, l) => x + l.miktar, 0)} birim).`); degisti(); }
+  else if (a === "tarama-simule") goruntuIsle(kameraTaramasiSimuleEt(), "kamera simülasyonu");
+  else if (a === "ekip-ciktisi") goruntuIsle(JSON.parse(JSON.stringify(EKIP_CIKTISI)), "depo_son_durum.json (ekip)");
+  else if (a === "json-isle") goruntuIsle($("jsonMetin").value, "yapıştırılan JSON");
+  else if (a === "ayikla") {
+    const sonuc = bozulanlariAyikla();
+    UI.goruntuMesaj = { tur: "iyi", baslik: `${sonuc.length} ürün raftan alındı.`, satirlar: sonuc.map(([t, l]) => `${t.pid} (${t.gtin ? urun(t.gtin).ad : t.tur}): ${l ? `lot ${l.lotNo}, ${AYAR.birim} birim imha` : "bağlı lot yok, yalnızca işaretlendi"}`) };
+    degisti();
+  }
+  else if (a === "tarama-sec") { UI.seciliTarama = +el.dataset.id; ciz(); }
+  else if (a === "tahmin-sec") { UI.seciliTahmin = el.dataset.g; ciz(); }
+});
+document.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr[data-a]")) { e.preventDefault(); e.target.click(); }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "okutForm") return;
+  e.preventDefault();
+  const g = $("barkod");
+  if (!g.value.trim()) { g.focus(); return; }
+  UI.son = barkodOkut(g.value, UI.islem);
+  if (!UI.son.basarili) bildir(UI.son.mesaj);
+  degisti();
+});
+document.addEventListener("change", e => {
+  if (e.target.name === "islem") UI.islem = e.target.value;
+  if (e.target.id === "jsonDosya" && e.target.files[0]) {
+    const f = e.target.files[0], okuyucu = new FileReader();
+    okuyucu.onload = () => goruntuIsle(String(okuyucu.result).replace(/^﻿/, ""), f.name);
+    okuyucu.onerror = () => { UI.goruntuMesaj = { tur: "kotu", baslik: "Dosya okunamadı.", satirlar: [] }; ciz(); };
+    okuyucu.readAsText(f, "utf-8");
+  }
+});
+$("sifirla").addEventListener("click", () => {
+  const b = $("sifirla");
+  if (!UI.sifirlaOnay) {
+    UI.sifirlaOnay = true; b.textContent = "Emin misin? Tekrar tıkla"; b.className = "onay";
+    setTimeout(() => { UI.sifirlaOnay = false; b.textContent = "Demo verisini sıfırla"; b.className = "tehlike"; }, 4000);
+    return;
+  }
+  UI.sifirlaOnay = false; b.textContent = "Demo verisini sıfırla"; b.className = "tehlike";
+  Object.assign(UI, { son: null, seciliGoz: null, tasima: null, seciliTarama: null, goruntuMesaj: null, seciliTahmin: null });
+  ornekOlustur(); degisti(); bildir("Demo verisi baştan oluşturuldu.");
+});
+window.addEventListener("hashchange", () => { ciz(); window.scrollTo({ top: 0 }); });
+
+// ============================================================ başlat
+S = yukle();
+if (!S) ornekOlustur();
+tumGruplariOlc(); kaydet(); ciz();
+setInterval(() => { tumGruplariOlc(); kaydet(); sensorCiz(); sekmeCiz(); }, AYAR.sensorSn * 1000);
+</script>
+</body>
+</html>
